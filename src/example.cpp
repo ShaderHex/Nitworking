@@ -13,6 +13,7 @@ int main() {
     
     SOCKET client_fd = accept_connection(server_fd);
     client_socket(server_fd, client_fd);
+    change_buffer_size(4026);
     while (true) {
         html_buffer(client_fd, "<html><body><h1>Hello, C++ on Windows! But dynamic one!</h1></body></html>");
     }

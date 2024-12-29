@@ -19,7 +19,7 @@ typedef int socklen_t;
 #endif
 
 #define PORT 8080
-#define BUFFER_SIZE 1024
+const int BUFFER_SIZE = 1024;
 
 #ifdef _WIN32
 void initialize_winsock() {
@@ -96,6 +96,11 @@ void html_buffer(int client_fd, const char* html_code) {
 
             send(client_fd, http_response.c_str(), http_response.size(), 0);
     }
+}
+
+void change_buffer_size(int set_buffer_size) {
+    #undef BUFFER_SIZE
+    #define BUFFER_SIZE set_buffer_size
 }
 
 void close_socket(int socket_fd) {
