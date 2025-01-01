@@ -7,9 +7,11 @@ int main() {
 #endif
     int server_fd = create_server_socket();
 
-    bind_socket(server_fd);
+    unsigned int port = 8080;
+
+    bind_socket(server_fd, port);
     listen_for_connections(server_fd);
-    std::cout<<"Listening on port "<< PORT <<std::endl;
+    std::cout<<"Listening on port "<< port <<std::endl;
     
     SOCKET client_fd = accept_connection(server_fd);
     client_socket(server_fd, client_fd);

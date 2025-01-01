@@ -18,7 +18,7 @@ typedef int socklen_t;
 #include <string>
 #endif
 
-#define PORT 8080
+//#define PORT 8080
 const int BUFFER_SIZE = 1024;
 
 #ifdef _WIN32
@@ -41,11 +41,11 @@ int create_server_socket() {
 }
 #endif
 
-void bind_socket(int server_fd) {
+void bind_socket(int server_fd, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
+    server_addr.sin_port = htons(port_input);
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
         std::cerr << "Bind failed: " << WSAGetLastError() << std::endl;
