@@ -7,6 +7,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <string>
+#include <fstream>
 #pragma comment(lib, "ws2_32.lib")
 typedef int socklen_t;
 #else
@@ -15,7 +16,7 @@ typedef int socklen_t;
 #include <unistd.h>
 #include <string.h>
 #include <arpa/inet.h>
-#include <string>
+#include <fstream>
 #endif
 
 //#define PORT 8080
@@ -101,6 +102,34 @@ void html_buffer(int client_fd, const char* html_code) {
 void change_buffer_size(int set_buffer_size) {
     #undef BUFFER_SIZE
     #define BUFFER_SIZE set_buffer_size
+}
+
+const char* html_from_file() {
+    static char html_code[1024];
+    std::ifstream file("example.html");
+
+    if (!file.is_open()) {
+        std::cerr << "Failed to open the file." << std::endl;
+        return nullptr;
+    }
+
+    size_t index = 0;
+    std::string line;
+    while (std::getline(file, line)) {
+        if (index + line.size() < sizeof(html_code) - 1) {
+            std::copy(line.begin(), line.end(), html_code + index);
+            index += line.size();
+            html_code[index++] = '\n';
+        } else {
+            std::cerr << "Buffer overflow!" << std::endl;
+            break;
+        }
+    }
+
+    file.close();
+    html_code[index] = '\0';
+
+    return html_code;
 }
 
 void close_socket(int socket_fd) {
