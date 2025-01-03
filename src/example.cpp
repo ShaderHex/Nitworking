@@ -8,12 +8,12 @@ int main() {
     initialize_winsock();
 #endif
     int server_fd = create_server_socket();
-    unsigned int port = 8080;
+    unsigned int port = 2000;
 
     bind_socket(server_fd, port);
     listen_for_connections(server_fd);
     std::cout<<"Listening on port "<< port <<std::endl;
-    SOCKET client_fd = accept_connection(server_fd);
+    int client_fd = accept_connection(server_fd);
     client_socket(server_fd, client_fd);
     change_buffer_size(2147483648);
     while (true) {
