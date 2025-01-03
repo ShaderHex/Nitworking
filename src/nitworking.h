@@ -42,6 +42,7 @@ int create_server_socket() {
 }
 #endif
 
+#ifdef _WIN32
 void bind_socket(int server_fd, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -55,7 +56,22 @@ void bind_socket(int server_fd, int port_input) {
         return exit(-1);
     }
 }
+#else
+void bind_socket(int server_fd, int port_input) {
+  sockaddr_in server_addr;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_port = htons(port_input);
 
+  if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SO_ERROR) {
+        std::cerr << "Bind failed: " << strerror(errno) << std::endl;
+        close(server_fd);
+        return exit(-1);
+  }  
+}
+#endif
+
+#ifdef _WIN32
 void listen_for_connections(int server_fd) {
         if (listen(server_fd, SOMAXCONN) == SOCKET_ERROR) {
         std::cerr << "Listen failed: " << WSAGetLastError() << std::endl;
@@ -64,7 +80,16 @@ void listen_for_connections(int server_fd) {
         return exit(-1);
     }
 }
+#else
+void listen_for_connections(int server_fd) {
+        if (listen(server_fd, SOMAXCONN) == SO_ERROR) {
+        std::cerr << "Listen failed: " << strerror(errno) << std::endl;
+        return exit(-1);
+    }
+}
+#endif
 
+#ifdef _WIN32
 void client_socket(int server_fd, int client_fd) {
     sockaddr_in client_addr;
     int clientAddrSize = sizeof(client_addr);
@@ -75,11 +100,40 @@ void client_socket(int server_fd, int client_fd) {
         exit(-1);
     }
 }
+#else
+void client_socket(int server_fd, int client_fd) {
+    sockaddr_in client_addr;
+    int clientAddrSize = sizeof(client_addr);
+    if (client_fd == -1) {
+        std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+        close(server_fd);
+        exit(-1);
+    }
+}
+#endif
 
 int accept_connection(int server_fd) {
     sockaddr_in client_addr;
+    // Use socklen_t on Linux and int on Windows
+#ifdef _WIN32
     int clientAddrSize = sizeof(client_addr);
-    return accept(server_fd, (struct sockaddr*)&client_addr, &clientAddrSize);
+#else
+    socklen_t clientAddrSize = sizeof(client_addr);
+#endif
+
+    int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &clientAddrSize);
+    if (client_fd < 0) {
+#ifdef _WIN32
+        std::cerr << "Accept failed: " << WSAGetLastError() << std::endl;
+#else
+        std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+#endif
+        return -1;  // Indicate failure
+    }
+
+    std::cout << "Connection accepted from: "
+              << inet_ntoa(client_addr.sin_addr) << std::endl;
+    return client_fd;
 }
 
 void html_buffer(int client_fd, const char* html_code) {
