@@ -105,32 +105,33 @@ void change_buffer_size(int set_buffer_size) {
 }
 
 const char* html_from_file() {
-    static char html_code[1024];
-    std::ifstream file("example.html");
-
+    std::ifstream file("example.html", std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Failed to open the file." << std::endl;
         return nullptr;
     }
 
-    size_t index = 0;
-    std::string line;
-    while (std::getline(file, line)) {
-        if (index + line.size() < sizeof(html_code) - 1) {
-            std::copy(line.begin(), line.end(), html_code + index);
-            index += line.size();
-            html_code[index++] = '\n';
-        } else {
-            std::cerr << "Buffer overflow!" << std::endl;
-            break;
-        }
+    std::streamsize size = file.tellg();
+    if (size <= 0) {
+        std::cerr << "File is empty or inaccessible." << std::endl;
+        return nullptr;
     }
 
+    file.seekg(0, std::ios::beg);
+
+    char* html_code = new char[size + 1];
+    if (!file.read(html_code, size)) {
+        std::cerr << "Error reading file." << std::endl;
+        delete[] html_code;
+        return nullptr;
+    }
+
+    html_code[size] = '\0';
     file.close();
-    html_code[index] = '\0';
 
     return html_code;
 }
+
 
 void close_socket(int socket_fd) {
 #ifdef _WIN32
