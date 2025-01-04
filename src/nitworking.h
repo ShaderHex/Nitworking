@@ -158,8 +158,8 @@ void change_buffer_size(int set_buffer_size) {
     #define BUFFER_SIZE set_buffer_size
 }
 
-const char* html_from_file() {
-    std::ifstream file("example.html", std::ios::ate | std::ios::binary);
+const char* html_from_file(const char* path_to_html) {
+    std::ifstream file(path_to_html, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Failed to open the file." << std::endl;
         return nullptr;
