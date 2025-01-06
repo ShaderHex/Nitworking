@@ -19,6 +19,11 @@ typedef int socklen_t;
 #include <fstream>
 #endif
 
+#ifdef _WIN32
+typedef SOCEKT sock;
+#else
+typedef int sock;
+#endif
 //#define PORT 8080
 const int BUFFER_SIZE = 1024;
 
@@ -185,7 +190,6 @@ const char* html_from_file(const char* path_to_html) {
 
     return html_code;
 }
-
 
 void close_socket(int socket_fd) {
 #ifdef _WIN32

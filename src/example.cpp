@@ -7,16 +7,18 @@ int main() {
 #ifdef _WIN32
     initialize_winsock();
 #endif
-    int server_fd = create_server_socket();
+    sock server_fd = create_server_socket();
     unsigned int port = 8080;
 
     bind_socket(server_fd, port);
     listen_for_connections(server_fd);
     std::cout<<"Listening on port "<< port <<std::endl;
 
-    int client_fd = accept_connection(server_fd);
+    sock client_fd = accept_connection(server_fd);
     client_socket(server_fd, client_fd);
 
+    std::cout<<server_fd<<std::endl;
+    std::cout<<client_fd<<std::endl;
     while (true) {
         html_buffer(client_fd, html_from_file("example.html"));
     }
