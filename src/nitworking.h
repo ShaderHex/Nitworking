@@ -39,13 +39,44 @@ void initialize_winsock() {
 
 #ifdef _WIN32
 int create_server_socket() {
-    return socket(AF_INET, SOCK_STREAM, 0);
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == INVALID_SOCKET) {
+        std::cerr << "Socket creation failed: " << WSAGetLastError() << std::endl;
+        WSACleanup();
+        exit(-1);
+    }
+
+    // Enable SO_REUSEADDR
+    char opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == SOCKET_ERROR) {
+        std::cerr << "Failed to set SO_REUSEADDR: " << WSAGetLastError() << std::endl;
+        closesocket(server_fd);
+        WSACleanup();
+        exit(-1);
+    }
+
+    return server_fd;
 }
 #else
 int create_server_socket() {
-    return socket(AF_INET, SOCK_STREAM, 0);
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        std::cerr << "Socket creation failed: " << strerror(errno) << std::endl;
+        exit(-1);
+    }
+
+    // Enable SO_REUSEADDR
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        std::cerr << "Failed to set SO_REUSEADDR: " << strerror(errno) << std::endl;
+        close(server_fd);
+        exit(-1);
+    }
+
+    return server_fd;
 }
 #endif
+
 
 #ifdef _WIN32
 void bind_socket(int server_fd, int port_input) {

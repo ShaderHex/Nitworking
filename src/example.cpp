@@ -17,9 +17,7 @@ int main() {
     sock client_fd = accept_connection(server_fd);
     client_socket(server_fd, client_fd);
 
-    std::cout<<server_fd<<std::endl;
-    std::cout<<client_fd<<std::endl;
-    while (true) {
+    while(true) {
         html_buffer(client_fd, html_from_file("example.html"));
     }
 
