@@ -82,75 +82,55 @@ int create_server_socket() {
 void bind_socket(int server_fd, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all available interfaces
     server_addr.sin_port = htons(port_input);
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
         std::cerr << "Bind failed: " << WSAGetLastError() << std::endl;
         closesocket(server_fd);
         WSACleanup();
-        return exit(-1);
+        exit(-1);
     }
 }
 #else
 void bind_socket(int server_fd, int port_input) {
-  sockaddr_in server_addr;
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(port_input);
+    sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all available interfaces
+    server_addr.sin_port = htons(port_input);
 
-  if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SO_ERROR) {
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
         close(server_fd);
-        return exit(-1);
-  }  
+        exit(-1);
+    }
 }
 #endif
 
+
 #ifdef _WIN32
 void listen_for_connections(int server_fd) {
-        if (listen(server_fd, SOMAXCONN) == SOCKET_ERROR) {
+    if (listen(server_fd, SOMAXCONN) == SOCKET_ERROR) {
         std::cerr << "Listen failed: " << WSAGetLastError() << std::endl;
         closesocket(server_fd);
         WSACleanup();
-        return exit(-1);
+        exit(-1);
     }
+    std::cout << "Listening for connections..." << std::endl;
 }
 #else
 void listen_for_connections(int server_fd) {
-        if (listen(server_fd, SOMAXCONN) == SO_ERROR) {
+    if (listen(server_fd, SOMAXCONN) < 0) {
         std::cerr << "Listen failed: " << strerror(errno) << std::endl;
-        return exit(-1);
-    }
-}
-#endif
-
-#ifdef _WIN32
-void client_socket(int server_fd, int client_fd) {
-    sockaddr_in client_addr;
-    int clientAddrSize = sizeof(client_addr);
-    if (client_fd == INVALID_SOCKET) {
-        std::cerr << "Accept failed: " << WSAGetLastError() << std::endl;
-        closesocket(server_fd);
-        WSACleanup();
-        exit(-1);
-    }
-}
-#else
-void client_socket(int server_fd, int client_fd) {
-    sockaddr_in client_addr;
-    int clientAddrSize = sizeof(client_addr);
-    if (client_fd == -1) {
-        std::cerr << "Accept failed: " << strerror(errno) << std::endl;
         close(server_fd);
         exit(-1);
     }
+    std::cout << "Listening for connections..." << std::endl;
 }
 #endif
 
 int accept_connection(int server_fd) {
     sockaddr_in client_addr;
-    // Use socklen_t on Linux and int on Windows
 #ifdef _WIN32
     int clientAddrSize = sizeof(client_addr);
 #else
@@ -167,10 +147,12 @@ int accept_connection(int server_fd) {
         return -1;  // Indicate failure
     }
 
-    std::cout << "Connection accepted from: "
-              << inet_ntoa(client_addr.sin_addr) << std::endl;
+    std::string client_ip = inet_ntoa(client_addr.sin_addr);
+    std::cout << "Connection accepted from: " << client_ip << std::endl;
+    
     return client_fd;
 }
+
 
 void html_buffer(int client_fd, const char* html_code) {
     char buffer[BUFFER_SIZE] = {0};
@@ -224,8 +206,14 @@ const char* html_from_file(const char* path_to_html) {
 
 void close_socket(int socket_fd) {
 #ifdef _WIN32
-    closesocket(socket_fd);
+    if (closesocket(socket_fd) == SOCKET_ERROR) {
+        std::cerr << "Error closing socket: " << WSAGetLastError() << std::endl;
+    }
+    WSACleanup();
 #else
-    close(socket_fd);
+    if (close(socket_fd) < 0) {
+        std::cerr << "Error closing socket: " << strerror(errno) << std::endl;
+    }
 #endif
 }
+
