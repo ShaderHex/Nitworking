@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
+#include <vector>
 
 #ifdef _WIN32
 #include <iostream>
@@ -24,8 +26,14 @@ typedef SOCEKT sock;
 #else
 typedef int sock;
 #endif
-//#define PORT 8080
 const int BUFFER_SIZE = 1024;
+
+struct PathHandler {
+    std::string url_path;
+    std::string html_response;
+};
+
+std::vector<PathHandler> path_handlers;
 
 #ifdef _WIN32
 void initialize_winsock() {
@@ -64,7 +72,6 @@ int create_server_socket() {
         exit(-1);
     }
 
-    // Enable SO_REUSEADDR
     int opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         std::cerr << "Failed to set SO_REUSEADDR: " << strerror(errno) << std::endl;
@@ -152,7 +159,7 @@ int accept_connection(int server_fd) {
 #else
         std::cerr << "Accept failed: " << strerror(errno) << std::endl;
 #endif
-        return -1;  // Indicate failure
+        return -1;
     }
 
     std::string client_ip = inet_ntoa(client_addr.sin_addr);
@@ -161,21 +168,44 @@ int accept_connection(int server_fd) {
     return client_fd;
 }
 
+std::string get_request_path(const char* request) {
+    std::istringstream request_stream(request);
+    std::string method, path, version;
 
-void html_buffer(int client_fd, const char* html_code) {
+    request_stream >> method >> path >> version;
+
+    return path;
+}
+
+void new_path(const std::string& path_name, const std::string& html_content) {
+    path_handlers.push_back({path_name, html_content});
+}
+
+void html_buffer(int client_fd, const char* html_code, const char* url_paths[], int num_paths) {
     char buffer[BUFFER_SIZE] = {0};
     int bytesRead = recv(client_fd, buffer, BUFFER_SIZE, 0);
-    if (bytesRead > 0 ) {
+    
+    if (bytesRead > 0) {
         std::cout << "Received request:\n" << buffer << std::endl;
+
+        std::string request_path = get_request_path(buffer);
+        const char* response_body = "<html><body><h1>404 Not Found</h1></body></html>";
+        
+        for (int i = 0; i < num_paths; ++i) {
+            if (request_path == url_paths[i]) {
+                response_body = html_code;
+                break;
+            }
+        }
 
         std::string http_response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
-            "Content-Length: " + std::to_string(strlen(html_code)) + "\r\n"
+            "Content-Length: " + std::to_string(strlen(response_body)) + "\r\n"
             "\r\n" +
-            std::string(html_code);
+            std::string(response_body);
 
-            send(client_fd, http_response.c_str(), http_response.size(), 0);
+        send(client_fd, http_response.c_str(), http_response.size(), 0);
     }
 }
 
