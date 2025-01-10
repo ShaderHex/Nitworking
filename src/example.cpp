@@ -10,7 +10,7 @@ int main() {
     sock server_fd = create_server_socket();
     unsigned int port = 8080;
 
-    bind_socket(server_fd, port);
+    bind_socket(server_fd, "127.0.0.1" , port);
     listen_for_connections(server_fd);
     std::cout<<"Listening on port "<< port <<std::endl;
 

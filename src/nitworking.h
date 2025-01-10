@@ -46,7 +46,6 @@ int create_server_socket() {
         exit(-1);
     }
 
-    // Enable SO_REUSEADDR
     char opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == SOCKET_ERROR) {
         std::cerr << "Failed to set SO_REUSEADDR: " << WSAGetLastError() << std::endl;
@@ -79,25 +78,34 @@ int create_server_socket() {
 
 
 #ifdef _WIN32
-void bind_socket(int server_fd, int port_input) {
+void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all available interfaces
     server_addr.sin_port = htons(port_input);
 
-    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-        std::cerr << "Bind failed: " << WSAGetLastError() << std::endl;
-        closesocket(server_fd);
-        WSACleanup();
+    if (inet_pton(AF_INET, ip_addr.c_str(), &server_addr.sin_addr) <= 0) {
+        std::cerr << "Invalid IP address: " << ip_addr << std::endl;
+        close(server_fd);
+        exit(-1);
+    }
+
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        std::cerr << "Bind failed: " << strerror(errno) << std::endl;
+        close(server_fd);
         exit(-1);
     }
 }
 #else
-void bind_socket(int server_fd, int port_input) {
+void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all available interfaces
     server_addr.sin_port = htons(port_input);
+
+    if (inet_pton(AF_INET, ip_addr.c_str(), &server_addr.sin_addr) <= 0) {
+        std::cerr << "Invalid IP address: " << ip_addr << std::endl;
+        close(server_fd);
+        exit(-1);
+    }
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         std::cerr << "Bind failed: " << strerror(errno) << std::endl;
