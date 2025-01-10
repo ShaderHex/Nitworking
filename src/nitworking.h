@@ -28,12 +28,10 @@ typedef int sock;
 #endif
 const int BUFFER_SIZE = 1024;
 
-struct PathHandler {
-    std::string url_path;
-    std::string html_response;
+struct PathMapping {
+    const char* path;
+    const char* value;
 };
-
-std::vector<PathHandler> path_handlers;
 
 #ifdef _WIN32
 void initialize_winsock() {
@@ -177,11 +175,7 @@ std::string get_request_path(const char* request) {
     return path;
 }
 
-void new_path(const std::string& path_name, const std::string& html_content) {
-    path_handlers.push_back({path_name, html_content});
-}
-
-void html_buffer(int client_fd, const char* html_code, const char* url_paths[], int num_paths) {
+void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, int num_paths) {
     char buffer[BUFFER_SIZE] = {0};
     int bytesRead = recv(client_fd, buffer, BUFFER_SIZE, 0);
     
@@ -190,10 +184,10 @@ void html_buffer(int client_fd, const char* html_code, const char* url_paths[], 
 
         std::string request_path = get_request_path(buffer);
         const char* response_body = "<html><body><h1>404 Not Found</h1></body></html>";
-        
+
         for (int i = 0; i < num_paths; ++i) {
-            if (request_path == url_paths[i]) {
-                response_body = html_code;
+            if (request_path == mappings[i].path) {
+                response_body = mappings[i].value;
                 break;
             }
         }
@@ -208,6 +202,7 @@ void html_buffer(int client_fd, const char* html_code, const char* url_paths[], 
         send(client_fd, http_response.c_str(), http_response.size(), 0);
     }
 }
+
 
 void change_buffer_size(int set_buffer_size) {
     #undef BUFFER_SIZE
