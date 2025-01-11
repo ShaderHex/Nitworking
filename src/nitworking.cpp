@@ -34,7 +34,7 @@ void initialize_winsock() {
 int wsResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 if (wsResult != 0) {
     std::cerr << "WSAStartup failed: " << wsResult << std::endl;
-    exit(-1);  // Early exit
+    exit(-1); 
 }
 }
 #endif
@@ -211,33 +211,30 @@ void change_buffer_size(int set_buffer_size) {
 }
 
 // Reads the HTML file from disk and returns its content as a string. Returns nullptr on error.
-const char* html_from_file(const char* path_to_html) {
+std::vector<char> html_from_file(const char* path_to_html) {
     std::ifstream file(path_to_html, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "Failed to open the file." << std::endl;
-        return nullptr;
+        return {};
     }
 
     std::streamsize size = file.tellg();
     if (size <= 0) {
         std::cerr << "File is empty or inaccessible." << std::endl;
-        return nullptr;
+        return {}; // Return an empty vector if file size is zero or inaccessible.
     }
 
     file.seekg(0, std::ios::beg);
 
-    char* html_code = new char[size + 1];
-    if (!file.read(html_code, size)) {
+    std::vector<char> html_code(size);
+    if (!file.read(html_code.data(), size)) {
         std::cerr << "Error reading file." << std::endl;
-        delete[] html_code;
-        return nullptr;
+        return {};
     }
-
-    html_code[size] = '\0';
-    file.close();
 
     return html_code;
 }
+
 
 // Closes a socket (either client or server) and cleans up resources.
 void close_socket(int socket_fd) {

@@ -6,9 +6,9 @@ int main() {
 #ifdef _WIN32
     initialize_winsock();
 #endif
-
+    std::vector<char> example = html_from_file("example.html");
     PathMapping mapping[] = {
-        {"/home", html_from_file("example.html")},
+        {"/home", example.data()},
         {"/about", "<html><body>Made by ShaderHex (on github)</body></html>"},
         {"/contact", "<html><body>This project doesn't have discord server apparently</body></html>"}
     };
@@ -24,7 +24,7 @@ int main() {
     while (true) {
         sock client_fd = accept_connection(server_fd);
                 
-        html_buffer(client_fd, html_from_file("example.html"), mapping, 3);
+        html_buffer(client_fd, example.data(), mapping, 3);
         
         close_socket(client_fd);
     }
