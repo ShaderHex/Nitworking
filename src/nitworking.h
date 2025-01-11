@@ -11,7 +11,7 @@
 #include <string>
 #include <fstream>
 #pragma comment(lib, "ws2_32.lib")
-typedef int socklen_t;
+typedef SOCKET sock;
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,13 +19,9 @@ typedef int socklen_t;
 #include <string.h>
 #include <arpa/inet.h>
 #include <fstream>
-#endif
-
-#ifdef _WIN32
-typedef SOCEKT sock;
-#else
 typedef int sock;
 #endif
+
 const int BUFFER_SIZE = 1024;
 
 struct PathMapping {
@@ -37,10 +33,11 @@ struct PathMapping {
 // Initializes Windows sockets. It is necessary only on Windows platforms.
 void initialize_winsock() {
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "WSAStartup failed!" << std::endl;
-        exit(-1);
-    }
+int wsResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+if (wsResult != 0) {
+    std::cerr << "WSAStartup failed: " << wsResult << std::endl;
+    exit(-1);  // Early exit
+}
 }
 #endif
 
@@ -94,16 +91,11 @@ void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port_input);
 
-    if (inet_pton(AF_INET, ip_addr.c_str(), &server_addr.sin_addr) <= 0) {
-        std::cerr << "Invalid IP address: " << ip_addr << std::endl;
-        close(server_fd);
-        exit(-1);
-    }
-
-    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        std::cerr << "Bind failed: " << strerror(errno) << std::endl;
-        close(server_fd);
-        exit(-1);
+    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
+        std::cerr << "Bind failed: " << WSAGetLastError() << std::endl;
+        closesocket(server_fd);
+        WSACleanup();
+        return exit(-1);
     }
 }
 #else
@@ -255,7 +247,6 @@ void close_socket(int socket_fd) {
     if (closesocket(socket_fd) == SOCKET_ERROR) {
         std::cerr << "Error closing socket: " << WSAGetLastError() << std::endl;
     }
-    WSACleanup();
 #else
     if (close(socket_fd) < 0) {
         std::cerr << "Error closing socket: " << strerror(errno) << std::endl;
