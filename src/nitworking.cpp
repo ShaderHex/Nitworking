@@ -23,8 +23,8 @@ typedef int sock;
 static int BUFFER_SIZE = 1024;
 
 struct PathMapping {
-    const char* path;
-    const char* value;
+    std::string path;
+    std::string value;
 };
 
 #ifdef _WIN32
@@ -184,7 +184,7 @@ void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, in
         std::cout << "Received request:\n" << buffer << std::endl;
 
         std::string request_path = get_request_path(buffer);
-        const char* response_body = "<html><body><h1>404 Not Found</h1></body></html>";
+        std::string response_body = "<html><body><h1>404 Not Found</h1></body></html>"; // Changed to std::string
 
         for (int i = 0; i < num_paths; ++i) {
             if (request_path == mappings[i].path) {
@@ -196,13 +196,14 @@ void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, in
         std::string http_response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
-            "Content-Length: " + std::to_string(strlen(response_body)) + "\r\n"
+            "Content-Length: " + std::to_string(response_body.size()) + "\r\n" // Changed to size of std::string
             "\r\n" +
-            std::string(response_body);
+            response_body;
 
         send(client_fd, http_response.c_str(), http_response.size(), 0);
     }
 }
+
 
 // Allows dynamic modification of the buffer size for reading requests.
 void change_buffer_size(int set_buffer_size) {
