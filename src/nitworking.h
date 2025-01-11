@@ -127,7 +127,6 @@ void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
 }
 #endif
 
-
 #ifdef _WIN32
 // Prepares the server to listen for incoming client connections.
 void listen_for_connections(int server_fd) {
@@ -263,4 +262,3 @@ void close_socket(int socket_fd) {
     }
 #endif
 }
-
