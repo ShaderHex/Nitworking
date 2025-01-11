@@ -34,6 +34,7 @@ struct PathMapping {
 };
 
 #ifdef _WIN32
+// Initializes Windows sockets. It is necessary only on Windows platforms.
 void initialize_winsock() {
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
@@ -44,6 +45,8 @@ void initialize_winsock() {
 #endif
 
 #ifdef _WIN32
+// This function creates a server socket and configures it for connection acceptance:
+// NVALID_SOCKET is returned on failure.
 int create_server_socket() {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == INVALID_SOCKET) {
@@ -63,6 +66,8 @@ int create_server_socket() {
     return server_fd;
 }
 #else
+// This function creates a server socket and configures it for connection acceptance:
+//  - -1 is returned on failure.
 int create_server_socket() {
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) {
@@ -83,6 +88,7 @@ int create_server_socket() {
 
 
 #ifdef _WIN32
+// Binds the server socket to the specified IP address and port.
 void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -101,6 +107,7 @@ void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     }
 }
 #else
+// Binds the server socket to the specified IP address and port.
 void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
@@ -122,6 +129,7 @@ void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
 
 
 #ifdef _WIN32
+// Prepares the server to listen for incoming client connections.
 void listen_for_connections(int server_fd) {
     if (listen(server_fd, SOMAXCONN) == SOCKET_ERROR) {
         std::cerr << "Listen failed: " << WSAGetLastError() << std::endl;
@@ -132,6 +140,7 @@ void listen_for_connections(int server_fd) {
     std::cout << "Listening for connections..." << std::endl;
 }
 #else
+// Prepares the server to listen for incoming client connections.
 void listen_for_connections(int server_fd) {
     if (listen(server_fd, SOMAXCONN) < 0) {
         std::cerr << "Listen failed: " << strerror(errno) << std::endl;
@@ -142,6 +151,7 @@ void listen_for_connections(int server_fd) {
 }
 #endif
 
+// Accepts an incoming connection from a client and returns the client socket descriptor.
 int accept_connection(int server_fd) {
     sockaddr_in client_addr;
 #ifdef _WIN32
@@ -166,6 +176,7 @@ int accept_connection(int server_fd) {
     return client_fd;
 }
 
+// Extracts the request path from the raw HTTP request.
 std::string get_request_path(const char* request) {
     std::istringstream request_stream(request);
     std::string method, path, version;
@@ -175,6 +186,7 @@ std::string get_request_path(const char* request) {
     return path;
 }
 
+// Handles the client's request and serves the appropriate HTML response.
 void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, int num_paths) {
     char buffer[BUFFER_SIZE] = {0};
     int bytesRead = recv(client_fd, buffer, BUFFER_SIZE, 0);
@@ -203,12 +215,13 @@ void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, in
     }
 }
 
-
+// Allows dynamic modification of the buffer size for reading requests.
 void change_buffer_size(int set_buffer_size) {
     #undef BUFFER_SIZE
     #define BUFFER_SIZE set_buffer_size
 }
 
+// Reads the HTML file from disk and returns its content as a string. Returns nullptr on error.
 const char* html_from_file(const char* path_to_html) {
     std::ifstream file(path_to_html, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
@@ -237,6 +250,7 @@ const char* html_from_file(const char* path_to_html) {
     return html_code;
 }
 
+// Closes a socket (either client or server) and cleans up resources.
 void close_socket(int socket_fd) {
 #ifdef _WIN32
     if (closesocket(socket_fd) == SOCKET_ERROR) {
