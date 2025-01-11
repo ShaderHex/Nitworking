@@ -20,7 +20,7 @@ typedef SOCKET sock;
 typedef int sock;
 #endif
 
-const int BUFFER_SIZE = 1024;
+static int BUFFER_SIZE = 1024;
 
 struct PathMapping {
     const char* path;
@@ -206,8 +206,7 @@ void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, in
 
 // Allows dynamic modification of the buffer size for reading requests.
 void change_buffer_size(int set_buffer_size) {
-    #undef BUFFER_SIZE
-    #define BUFFER_SIZE set_buffer_size
+    BUFFER_SIZE = set_buffer_size;
 }
 
 // Reads the HTML file from disk and returns its content as a string. Returns nullptr on error.
