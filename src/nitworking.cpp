@@ -87,6 +87,7 @@ int create_server_socket() {
 void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
     sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htons(INADDR_ANY);
     server_addr.sin_port = htons(port_input);
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
