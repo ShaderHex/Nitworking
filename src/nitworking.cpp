@@ -177,7 +177,7 @@ std::string get_request_path(const char* request) {
 }
 
 // Handles the client's request and serves the appropriate HTML response.
-void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, int num_paths) {
+void html_buffer(int client_fd, PathMapping* mappings, int num_paths) {
     char buffer[BUFFER_SIZE] = {0};
     int bytesRead = recv(client_fd, buffer, BUFFER_SIZE, 0);
     

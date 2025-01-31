@@ -28,7 +28,7 @@ int main() {
     while (true) {
         sock client_fd = accept_connection(server_fd);
                 
-        html_buffer(client_fd, example.data(), mapping, 3);
+        html_buffer(client_fd, mapping, 3);
         
         close_socket(client_fd);
     }
