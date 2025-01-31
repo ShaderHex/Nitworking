@@ -2,6 +2,10 @@
 #include <iostream>
 #include <map>
 
+std::string contact_us() {
+    return "<html><body>Made by ShaderHex (on github)</body></html>";
+}
+
 int main() {
 #ifdef _WIN32
     initialize_winsock();
@@ -9,7 +13,7 @@ int main() {
     std::vector<char> example = html_from_file("example.html");
     PathMapping mapping[] = {
         {"/home", example.data()},
-        {"/about", "<html><body>Made by ShaderHex (on github)</body></html>"},
+        {"/about", contact_us()},
         {"/contact", "<html><body>This project doesn't have discord server apparently</body></html>"}
     };
 
