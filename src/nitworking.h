@@ -24,17 +24,16 @@ typedef int sock;
 class Socket {
     sock fd_;
 public:
-    Socket(sock fd = INVALID_SOCKET_HANDLE) : fd_(fd) {}
+    explicit Socket(sock fd = INVALID_SOCKET_HANDLE);
     ~Socket();
 
-    // Delete copy operations
     Socket(const Socket&) = delete;
     Socket& operator=(const Socket&) = delete;
 
-    // Move operations
-    Socket(Socket&& other) noexcept : fd_(other.fd_) { other.fd_ = INVALID_SOCKET_HANDLE; }
+    Socket(Socket&& other) noexcept;
     Socket& operator=(Socket&& other) noexcept;
 
+    explicit operator bool() const { return fd_ != INVALID_SOCKET_HANDLE; }
     operator sock() const { return fd_; }
     void close();
 };

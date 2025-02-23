@@ -1,9 +1,17 @@
 #include "nitworking.h"
 #include <fstream>
 #include <sstream>
+#include <cstring>  // Added for strerror
+
+// Socket implementation
+Socket::Socket(sock fd) : fd_(fd) {}
 
 Socket::~Socket() {
     close();
+}
+
+Socket::Socket(Socket&& other) noexcept : fd_(other.fd_) {
+    other.fd_ = INVALID_SOCKET_HANDLE;
 }
 
 Socket& Socket::operator=(Socket&& other) noexcept {

@@ -1,5 +1,4 @@
 #include "nitworking.h"
-#include <iostream>
 #include <vector>
 
 int main() {
@@ -15,18 +14,22 @@ int main() {
         };
 
         Socket server = create_server_socket();
-        bind_socket(server, "0.0.0.0", 8080);
+        bind_socket(server, "127.0.0.1", 8080);
         listen_for_connections(server);
         std::cout << "Listening on port 8080\n";
 
         while (true) {
             Socket client = accept_connection(server);
-            html_buffer(client, mappings);
+            if (client) {
+                html_buffer(client, mappings);
+            }
         }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
-        return 1;
     }
 
+#ifdef _WIN32
+    cleanup_winsock();
+#endif
     return 0;
 }
