@@ -1,7 +1,7 @@
 #include "nitworking.h"
 #include <fstream>
 #include <sstream>
-#include <cstring>  // Added for strerror
+#include <cstring>
 
 // Socket implementation
 Socket::Socket(sock fd) : fd_(fd) {}

@@ -15,9 +15,6 @@ jobs:
     - name: Build
       run: g++ src/example.cpp src/nitworking.cpp -o example -Wall -Wextra
 
-    - name: Run (Optional)
-      run: ./example &
-
   windows-build:
     runs-on: windows-latest
     steps:
