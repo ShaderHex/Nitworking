@@ -15,6 +15,9 @@ jobs:
     - name: Build
       run: g++ src/example.cpp src/nitworking.cpp -o example -Wall -Wextra
 
+    - name: Run (Optional)
+      run: ./example &
+
   windows-build:
     runs-on: windows-latest
     steps:
@@ -30,7 +33,3 @@ jobs:
     - name: Build
       shell: msys2 {0}
       run: g++ src/example.cpp src/nitworking.cpp -o example.exe -lws2_32
-
-    - name: Run (Optional)
-      shell: cmd
-      run: example.exe
