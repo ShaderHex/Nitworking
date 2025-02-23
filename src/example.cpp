@@ -1,37 +1,32 @@
 #include "nitworking.h"
 #include <iostream>
-#include <map>
-
-std::string contact_us() {
-    return "<html><body>Made by ShaderHex (on github)</body></html>";
-}
+#include <vector>
 
 int main() {
 #ifdef _WIN32
     initialize_winsock();
 #endif
-    std::vector<char> example = html_from_file("example.html");
-    PathMapping mapping[] = {
-        {"/home", example.data()},
-        {"/about", contact_us()},
-        {"/contact", "<html><body>This project doesn't have discord server apparently</body></html>"}
-    };
 
-    sock server_fd = create_server_socket();
-    unsigned int port = 8080;
+    try {
+        std::vector<PathMapping> mappings = {
+            {"/home", html_from_file("example.html")},
+            {"/about", "<html><body>Made by ShaderHex</body></html>"},
+            {"/contact", "<html><body>No Discord server</body></html>"}
+        };
 
-    bind_socket(server_fd, "127.0.0.1", port);
+        Socket server = create_server_socket();
+        bind_socket(server, "0.0.0.0", 8080);
+        listen_for_connections(server);
+        std::cout << "Listening on port 8080\n";
 
-    listen_for_connections(server_fd);
-    std::cout << "Listening on port " << port << std::endl;
-
-    while (true) {
-        sock client_fd = accept_connection(server_fd);
-                
-        html_buffer(client_fd, mapping, 3);
-        
-        close_socket(client_fd);
+        while (true) {
+            Socket client = accept_connection(server);
+            html_buffer(client, mappings);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
     }
 
-    close_socket(server_fd);
+    return 0;
 }

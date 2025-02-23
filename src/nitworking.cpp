@@ -1,251 +1,164 @@
-#include <iostream>
+#include "nitworking.h"
+#include <fstream>
 #include <sstream>
-#include <vector>
 
+Socket::~Socket() {
+    close();
+}
+
+Socket& Socket::operator=(Socket&& other) noexcept {
+    if (this != &other) {
+        close();
+        fd_ = other.fd_;
+        other.fd_ = INVALID_SOCKET_HANDLE;
+    }
+    return *this;
+}
+
+void Socket::close() {
+    if (fd_ != INVALID_SOCKET_HANDLE) {
 #ifdef _WIN32
-#include <iostream>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <string>
-#include <fstream>
-#pragma comment(lib, "ws2_32.lib")
-typedef SOCKET sock;
+        closesocket(fd_);
 #else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <string.h>
-#include <arpa/inet.h>
-#include <fstream>
-typedef int sock;
+        ::close(fd_);
 #endif
-
-static int BUFFER_SIZE = 1024;
-
-struct PathMapping {
-    std::string path;
-    std::string value;
-};
+        fd_ = INVALID_SOCKET_HANDLE;
+    }
+}
 
 #ifdef _WIN32
 // Initializes Windows sockets. It is necessary only on Windows platforms.
 void initialize_winsock() {
     WSADATA wsaData;
-int wsResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-if (wsResult != 0) {
-    std::cerr << "WSAStartup failed: " << wsResult << std::endl;
-    exit(-1); 
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        throw std::runtime_error("WSAStartup failed");
+    }
 }
+
+void cleanup_winsock() {
+    WSACleanup();
 }
 #endif
 
+// This function creates a server socket and configures it for connection acceptance:
+// INVALID_SOCKET is returned on failure.
+Socket create_server_socket() {
+    sock fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == INVALID_SOCKET_HANDLE) {
 #ifdef _WIN32
-// This function creates a server socket and configures it for connection acceptance:
-// NVALID_SOCKET is returned on failure.
-int create_server_socket() {
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd == INVALID_SOCKET) {
-        std::cerr << "Socket creation failed: " << WSAGetLastError() << std::endl;
-        WSACleanup();
-        exit(-1);
-    }
-
-    char opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == SOCKET_ERROR) {
-        std::cerr << "Failed to set SO_REUSEADDR: " << WSAGetLastError() << std::endl;
-        closesocket(server_fd);
-        WSACleanup();
-        exit(-1);
-    }
-
-    return server_fd;
-}
+        throw std::runtime_error("Socket creation failed: " + std::to_string(WSAGetLastError()));
 #else
-// This function creates a server socket and configures it for connection acceptance:
-//  - -1 is returned on failure.
-int create_server_socket() {
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_fd < 0) {
-        std::cerr << "Socket creation failed: " << strerror(errno) << std::endl;
-        exit(-1);
+        throw std::runtime_error(std::string("Socket creation failed: ") + strerror(errno));
+#endif
     }
 
     int opt = 1;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        std::cerr << "Failed to set SO_REUSEADDR: " << strerror(errno) << std::endl;
-        close(server_fd);
-        exit(-1);
-    }
-
-    return server_fd;
-}
-#endif
-
-
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR,
+                  reinterpret_cast<const char*>(&opt), sizeof(opt)) == -1) {
 #ifdef _WIN32
-// Binds the server socket to the specified IP address and port.
-void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
-    sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = htons(INADDR_ANY);
-    server_addr.sin_port = htons(port_input);
-
-    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-        std::cerr << "Bind failed: " << WSAGetLastError() << std::endl;
-        closesocket(server_fd);
-        WSACleanup();
-        return exit(-1);
-    }
-}
+        closesocket(fd);
 #else
-// Binds the server socket to the specified IP address and port.
-void bind_socket(int server_fd, const std::string& ip_addr, int port_input) {
-    sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port_input);
-
-    if (inet_pton(AF_INET, ip_addr.c_str(), &server_addr.sin_addr) <= 0) {
-        std::cerr << "Invalid IP address: " << ip_addr << std::endl;
-        close(server_fd);
-        exit(-1);
-    }
-
-    if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        std::cerr << "Bind failed: " << strerror(errno) << std::endl;
-        close(server_fd);
-        exit(-1);
-    }
-}
+        ::close(fd);
 #endif
+        throw std::runtime_error("Setsockopt failed");
+    }
 
+    return Socket(fd);
+}
+
+// Binds the server socket to the specified IP address and port.
+void bind_socket(Socket& server, const std::string& ip, int port) {
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+
+    if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) <= 0) {
+        throw std::runtime_error("Invalid IP address: " + ip);
+    }
+
+    if (bind(server, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) == -1) {
 #ifdef _WIN32
-// Prepares the server to listen for incoming client connections.
-void listen_for_connections(int server_fd) {
-    if (listen(server_fd, SOMAXCONN) == SOCKET_ERROR) {
-        std::cerr << "Listen failed: " << WSAGetLastError() << std::endl;
-        closesocket(server_fd);
-        WSACleanup();
-        exit(-1);
-    }
-    std::cout << "Listening for connections..." << std::endl;
-}
+        throw std::runtime_error("Bind failed: " + std::to_string(WSAGetLastError()));
 #else
-// Prepares the server to listen for incoming client connections.
-void listen_for_connections(int server_fd) {
-    if (listen(server_fd, SOMAXCONN) < 0) {
-        std::cerr << "Listen failed: " << strerror(errno) << std::endl;
-        close(server_fd);
-        exit(-1);
-    }
-    std::cout << "Listening for connections..." << std::endl;
-}
+        throw std::runtime_error(std::string("Bind failed: ") + strerror(errno));
 #endif
+    }
+}
+
+// Prepares the server to listen for incoming client connections.
+void listen_for_connections(Socket& server) {
+    if (listen(server, SOMAXCONN) == -1) {
+#ifdef _WIN32
+        throw std::runtime_error("Listen failed: " + std::to_string(WSAGetLastError()));
+#else
+        throw std::runtime_error(std::string("Listen failed: ") + strerror(errno));
+#endif
+    }
+    std::cout << "Listening for connections...\n";
+}
 
 // Accepts an incoming connection from a client and returns the client socket descriptor.
-int accept_connection(int server_fd) {
-    sockaddr_in client_addr;
+Socket accept_connection(Socket& server) {
+    sockaddr_in client_addr{};
 #ifdef _WIN32
-    int clientAddrSize = sizeof(client_addr);
+    int addrlen = sizeof(client_addr);
 #else
-    socklen_t clientAddrSize = sizeof(client_addr);
+    socklen_t addrlen = sizeof(client_addr);
 #endif
 
-    int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &clientAddrSize);
-    if (client_fd < 0) {
+    sock client_fd = accept(server, reinterpret_cast<sockaddr*>(&client_addr), &addrlen);
+    if (client_fd == INVALID_SOCKET_HANDLE) {
 #ifdef _WIN32
-        std::cerr << "Accept failed: " << WSAGetLastError() << std::endl;
+        throw std::runtime_error("Accept failed: " + std::to_string(WSAGetLastError()));
 #else
-        std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+        throw std::runtime_error(std::string("Accept failed: ") + strerror(errno));
 #endif
-        return -1;
     }
 
-    std::string client_ip = inet_ntoa(client_addr.sin_addr);
-    std::cout << "Connection accepted from: " << client_ip << std::endl;
-    
-    return client_fd;
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+    std::cout << "Connection from: " << client_ip << "\n";
+
+    return Socket(client_fd);
 }
 
-// Extracts the request path from the raw HTTP request.
-std::string get_request_path(const char* request) {
-    std::istringstream request_stream(request);
-    std::string method, path, version;
+std::string html_from_file(const char* path) {
+    std::ifstream file(path, std::ios::ate | std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Failed to open file: " + std::string(path));
+    }
 
-    request_stream >> method >> path >> version;
+    size_t file_size = file.tellg();
+    std::string content(file_size, '\0');
+    file.seekg(0);
+    file.read(&content[0], file_size);
 
-    return path;
+    return content;
 }
 
 // Handles the client's request and serves the appropriate HTML response.
-void html_buffer(int client_fd, PathMapping* mappings, int num_paths) {
-    char buffer[BUFFER_SIZE] = {0};
-    int bytesRead = recv(client_fd, buffer, BUFFER_SIZE, 0);
-    
-    if (bytesRead > 0) {
-        std::cout << "Received request:\n" << buffer << std::endl;
+void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings) {
+    std::string buffer(BUFFER_SIZE, '\0');
+    ssize_t bytes_read = recv(client, &buffer[0], BUFFER_SIZE, 0);
 
-        std::string request_path = get_request_path(buffer);
-        std::string response_body = "<html><body><h1>404 Not Found</h1></body></html>"; // Changed to std::string
+    if (bytes_read > 0) {
+        std::istringstream request(buffer);
+        std::string method, path, version;
+        request >> method >> path >> version;
 
-        for (int i = 0; i < num_paths; ++i) {
-            if (request_path == mappings[i].path) {
-                response_body = mappings[i].value;
+        std::string response = "<html><body><h1>404 Not Found</h1></body></html>";
+        for (const auto& mapping : mappings) {
+            if (path == mapping.path) {
+                response = mapping.value;
                 break;
             }
         }
 
-        std::string http_response =
+        const std::string header = 
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
-            "Content-Length: " + std::to_string(response_body.size()) + "\r\n" // Changed to size of std::string
-            "\r\n" +
-            response_body;
+            "Content-Length: " + std::to_string(response.size()) + "\r\n\r\n";
 
-        send(client_fd, http_response.c_str(), http_response.size(), 0);
+        send(client, (header + response).c_str(), header.size() + response.size(), 0);
     }
-}
-
-
-// Allows dynamic modification of the buffer size for reading requests.
-void change_buffer_size(int set_buffer_size) {
-    BUFFER_SIZE = set_buffer_size;
-}
-
-// Reads the HTML file from disk and returns its content as a string. Returns nullptr on error.
-std::vector<char> html_from_file(const char* path_to_html) {
-    std::ifstream file(path_to_html, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
-        std::cerr << "Failed to open the file." << std::endl;
-        return {};
-    }
-
-    std::streamsize size = file.tellg();
-    if (size <= 0) {
-        std::cerr << "File is empty or inaccessible." << std::endl;
-        return {}; // Return an empty vector if file size is zero or inaccessible.
-    }
-
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> html_code(size);
-    if (!file.read(html_code.data(), size)) {
-        std::cerr << "Error reading file." << std::endl;
-        return {};
-    }
-
-    return html_code;
-}
-
-
-// Closes a socket (either client or server) and cleans up resources.
-void close_socket(int socket_fd) {
-#ifdef _WIN32
-    if (closesocket(socket_fd) == SOCKET_ERROR) {
-        std::cerr << "Error closing socket: " << WSAGetLastError() << std::endl;
-    }
-#else
-    if (close(socket_fd) < 0) {
-        std::cerr << "Error closing socket: " << strerror(errno) << std::endl;
-    }
-#endif
 }

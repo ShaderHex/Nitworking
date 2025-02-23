@@ -1,11 +1,62 @@
 #pragma once
-#include "nitworking.cpp"
 
+#include <string>
+#include <vector>
+#include <stdexcept>
+#include <iostream>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+typedef SOCKET sock;
+#define INVALID_SOCKET_HANDLE INVALID_SOCKET
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <cstring>
+typedef int sock;
+#define INVALID_SOCKET_HANDLE -1
+#endif
+
+class Socket {
+    sock fd_;
+public:
+    Socket(sock fd = INVALID_SOCKET_HANDLE) : fd_(fd) {}
+    ~Socket();
+
+    // Delete copy operations
+    Socket(const Socket&) = delete;
+    Socket& operator=(const Socket&) = delete;
+
+    // Move operations
+    Socket(Socket&& other) noexcept : fd_(other.fd_) { other.fd_ = INVALID_SOCKET_HANDLE; }
+    Socket& operator=(Socket&& other) noexcept;
+
+    operator sock() const { return fd_; }
+    void close();
+};
+
+struct PathMapping {
+    std::string path;
+    std::string value;
+};
+
+#ifdef _WIN32
 void initialize_winsock();
-int create_server_socket();
-void bind_socket(int server_fd, const std::string& ip_addr, int port_input);
-void listen_for_connections(int server_fd);
-int accept_connection(int server_fd);
-void html_buffer(int client_fd, const char* html_code, PathMapping* mappings, int num_paths);
-std::vector<char> html_from_file(const char* path_to_html);
-void close_socket(int socket_fd);
+void cleanup_winsock();
+#else
+inline void initialize_winsock() {}
+inline void cleanup_winsock() {}
+#endif
+
+Socket create_server_socket();
+void bind_socket(Socket& server, const std::string& ip, int port);
+void listen_for_connections(Socket& server);
+Socket accept_connection(Socket& server);
+void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings);
+std::string html_from_file(const char* path);
+
+inline int BUFFER_SIZE = 1024;

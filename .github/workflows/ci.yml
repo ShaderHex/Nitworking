@@ -1,0 +1,39 @@
+name: Cross-Platform CI
+
+on: [push, pull_request]
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y g++
+
+    - name: Build
+      run: g++ src/example.cpp src/nitworking.cpp -o example -Wall -Wextra
+
+    - name: Run (Optional)
+      run: ./example &
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install MSYS2 and MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        update: true
+        install: mingw-w64-x86_64-gcc
+
+    - name: Build
+      shell: msys2 {0}
+      run: g++ src/example.cpp src/nitworking.cpp -o example.exe -lws2_32
+
+    - name: Run (Optional)
+      shell: cmd
+      run: example.exe
