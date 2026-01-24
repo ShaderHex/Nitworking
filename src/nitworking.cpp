@@ -147,7 +147,12 @@ std::string html_from_file(const char* path) {
 // Handles the client's request and serves the appropriate HTML response.
 void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings) {
     std::string buffer(BUFFER_SIZE, '\0');
+
+#ifdef _WIN32
+    int bytes_read = recv(client, &buffer[0], BUFFER_SIZE, 0);
+#else
     ssize_t bytes_read = recv(client, &buffer[0], BUFFER_SIZE, 0);
+#endif
 
     if (bytes_read > 0) {
         std::istringstream request(buffer);
