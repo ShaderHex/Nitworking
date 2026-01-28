@@ -108,8 +108,8 @@ Visit the server at `http://127.0.0.1:8080/home`, `/about`, or `/contact` in you
 
 ## Future Plans
 
-- [] - Simplify the API further for a better developer experience. (WIP)
-- [] - Add support for UDP communication.  
+- [ ] - Simplify the API further for a better developer experience. (WIP)
+- [ ] - Add support for UDP communication.  
 
 ---
 
