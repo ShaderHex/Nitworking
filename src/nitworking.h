@@ -57,11 +57,8 @@ struct PathMapping {
 };
 
 #ifdef _WIN32
-void initialize_winsock();
-void cleanup_winsock();
-#else
-inline void initialize_winsock() {}
-inline void cleanup_winsock() {}
+inline void initialize_winsock();
+inline void cleanup_winsock();
 #endif
 
 Socket create_server_socket();
