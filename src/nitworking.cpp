@@ -179,4 +179,22 @@ void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings)
     }
 }
 
+void Server::init(const std::string ip, int port) {
+    m_port = port;
+#ifdef _WIN32
+    initialize_winsock();
+#endif
+
+    m_server_socket = create_server_socket();
+    bind_socket(m_server_socket, ip, m_port);
+    listen_for_connections(m_server_socket);
+}
+
+void Server::listen() {
+    Socket client = accept_connection(m_server_socket);
+
+    std::vector<PathMapping> mappings;
+    html_buffer(client, mappings);
+}
+
 }

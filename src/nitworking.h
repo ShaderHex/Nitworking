@@ -41,6 +41,16 @@ public:
     void close();
 };
 
+class Server {
+public:
+    void init(const std::string ip, int port);
+    void listen();
+private:
+    Socket m_server_socket;
+    int m_port;
+    const std::string m_ip;
+};
+
 struct PathMapping {
     std::string path;
     std::string value;

@@ -19,9 +19,9 @@ int main() {
         std::cout << "Listening on port 8080\n";
 
         while (true) {
-            NW::Socket client = NW::accept_connection(server);
+            NW::Socket client = accept_connection(server);
             if (client) {
-                NW::html_buffer(client, mappings);
+                html_buffer(client, mappings);
             }
         }
     } catch (const std::exception& e) {
