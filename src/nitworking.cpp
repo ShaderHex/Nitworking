@@ -3,6 +3,9 @@
 #include <sstream>
 #include <cstring>
 
+
+namespace NW {
+
 // Socket implementation
 Socket::Socket(sock fd) : fd_(fd) {}
 
@@ -174,4 +177,6 @@ void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings)
 
         send(client, (header + response).c_str(), header.size() + response.size(), 0);
     }
+}
+
 }

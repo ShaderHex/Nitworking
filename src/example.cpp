@@ -3,25 +3,25 @@
 
 int main() {
 #ifdef _WIN32
-    initialize_winsock();
+    NW::initialize_winsock();
 #endif
 
     try {
-        std::vector<PathMapping> mappings = {
-            {"/home", html_from_file("example.html")},
+        std::vector<NW::PathMapping> mappings = {
+            {"/home", NW::html_from_file("example.html")},
             {"/about", "<html><body>Made by ShaderHex</body></html>"},
             {"/contact", "<html><body>No Discord server</body></html>"}
         };
 
-        Socket server = create_server_socket();
-        bind_socket(server, "127.0.0.1", 8080);
-        listen_for_connections(server);
+        NW::Socket server = NW::create_server_socket();
+        NW::bind_socket(server, "127.0.0.1", 8080);
+        NW::listen_for_connections(server);
         std::cout << "Listening on port 8080\n";
 
         while (true) {
-            Socket client = accept_connection(server);
+            NW::Socket client = NW::accept_connection(server);
             if (client) {
-                html_buffer(client, mappings);
+                NW::html_buffer(client, mappings);
             }
         }
     } catch (const std::exception& e) {

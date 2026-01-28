@@ -21,6 +21,9 @@ typedef int sock;
 #define INVALID_SOCKET_HANDLE -1
 #endif
 
+namespace NW {
+
+
 class Socket {
     sock fd_;
 public:
@@ -59,3 +62,5 @@ void html_buffer(const Socket& client, const std::vector<PathMapping>& mappings)
 std::string html_from_file(const char* path);
 
 inline int BUFFER_SIZE = 1024;
+
+}
